@@ -1,0 +1,71 @@
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "connector-service"
+version = "0.1.0"
+description = "A reusable, policy-enforced connector service for internal applications and agents."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "Proprietary" }
+authors = [{ name = "Connector Service Team" }]
+dependencies = [
+  "alembic==1.17.2",
+  "cryptography==45.0.5",
+  "fastapi==0.121.2",
+  "httpx==0.28.1",
+  "mcp==1.28.1",
+  "pydantic==2.12.4",
+  "pydantic-settings==2.12.0",
+  "python-dotenv==1.1.1",
+  "sqlalchemy==2.0.42",
+  "uvicorn==0.38.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest==9.0.1",
+  "pytest-cov==7.0.0",
+  "ruff==0.15.21",
+]
+
+[project.scripts]
+connector-dashboard = "connector_service.tools.dashboard_login:main"
+connector-mcp = "connector_service.mcp_server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/connector_service"]
+
+[tool.pytest.ini_options]
+addopts = "-q --strict-markers --disable-warnings -m \"not live\""
+pythonpath = ["src"]
+testpaths = ["tests"]
+markers = [
+  "live: requires explicit real-provider environment configuration",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["connector_service"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+fail_under = 80
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "C4", "SIM", "RUF"]
+ignore = ["B008"]
+
+[tool.ruff.lint.per-file-ignores]
+"migrations/versions/*.py" = ["E501"]
+"tests/*.py" = ["S101"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
