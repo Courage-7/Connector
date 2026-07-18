@@ -20,3 +20,6 @@ htmlcov/
 work/
 web/node_modules/
 web/*.tsbuildinfo
+research/
+design/
+.PLANS.md
