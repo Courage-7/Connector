@@ -8,6 +8,25 @@ The product flow is user-authorized: a person connects a provider in the browser
 required scopes, and remains in control of sensitive agent operations. Supabase access is bounded
 to structured reads; Outlook and Gmail writes require exact-content approval before execution.
 
+## Modular provider selection
+
+Provider implementations are isolated under `src/connector_service/providers/<provider>/` and are
+assembled through a typed provider catalog. A deployment can enable exactly the tools its consuming
+project needs:
+
+```dotenv
+CONNECTOR_ENABLED_PROVIDERS=supabase
+CONNECTOR_ENABLED_PROVIDERS=gmail
+CONNECTOR_ENABLED_PROVIDERS=gmail,outlook
+CONNECTOR_ENABLED_PROVIDERS=supabase,outlook,gmail
+```
+
+Disabled providers are not constructed, their provider-specific routes are not mounted, and their
+action connectors are not registered. Authenticated projects can call `GET /v1/providers` to
+discover enabled capabilities and configuration readiness. See
+[`docs/architecture/provider-modules.md`](docs/architecture/provider-modules.md) for the extension
+contract and package layout.
+
 ## Current capabilities
 
 ### Supabase

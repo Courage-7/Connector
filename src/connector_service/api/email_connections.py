@@ -54,6 +54,7 @@ from connector_service.email_governance import (
     fail_email_audit,
     start_email_audit,
 )
+from connector_service.providers.catalog import ProviderCatalog
 
 router = APIRouter(prefix="/v1/connections", tags=["Email connections"])
 
@@ -402,8 +403,8 @@ async def active_email_connection(
 
 
 def _client(request: Request, provider: EmailProvider) -> EmailClient:
-    clients: dict[str, EmailClient] = request.app.state.email_clients
-    return clients[provider.value]
+    providers: ProviderCatalog = request.app.state.providers
+    return providers.email_client(provider.value)
 
 
 def _connection_response(connection: ProviderConnection) -> EmailConnectionResponse:

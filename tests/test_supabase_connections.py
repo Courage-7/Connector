@@ -9,8 +9,8 @@ from pydantic import SecretStr
 from sqlalchemy import select
 
 from connector_service.app import create_app
-from connector_service.connectors.supabase.catalog import _quote_identifier
 from connector_service.db.models import OAuthAttempt, ProviderConnection
+from connector_service.providers.supabase.catalog import _quote_identifier
 
 PROJECT_REF = "abcdefghijklmnopqrst"
 

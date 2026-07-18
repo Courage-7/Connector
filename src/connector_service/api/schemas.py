@@ -6,12 +6,12 @@ from typing import Literal
 
 from pydantic import Field
 
-from connector_service.connectors.supabase.schemas import (
+from connector_service.core.contracts import StrictModel
+from connector_service.providers.supabase.schemas import (
     SupabaseAction,
     SupabaseCredentialInput,
     SupabaseGrantPolicy,
 )
-from connector_service.core.contracts import StrictModel
 
 
 class CredentialCreate(StrictModel):

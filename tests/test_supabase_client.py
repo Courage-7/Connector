@@ -5,8 +5,8 @@ import asyncio
 import httpx
 import pytest
 
-from connector_service.connectors.supabase.client import SupabaseDataClient
 from connector_service.core.exceptions import ProviderRequestError, ProviderUnavailableError
+from connector_service.providers.supabase.client import SupabaseDataClient
 
 
 def make_client(

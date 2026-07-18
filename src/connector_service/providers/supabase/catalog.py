@@ -4,15 +4,15 @@ from __future__ import annotations
 
 from typing import Any
 
-from connector_service.connectors.supabase.connection_schemas import (
+from connector_service.core.exceptions import InvalidRequestError, ProviderRequestError
+from connector_service.providers.supabase.connection_schemas import (
     ColumnSummary,
     TableDescription,
     TableKind,
     TableQuery,
     TableSummary,
 )
-from connector_service.connectors.supabase.management import SupabaseManagementClient
-from connector_service.core.exceptions import InvalidRequestError, ProviderRequestError
+from connector_service.providers.supabase.management import SupabaseManagementClient
 
 TABLES_QUERY = """
 SELECT

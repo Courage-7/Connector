@@ -15,24 +15,6 @@ from sqlalchemy.orm import Session
 from connector_service.api.dependencies import get_session, require_project
 from connector_service.config import Settings
 from connector_service.connectors.oauth import create_oauth_material, digest_oauth_state
-from connector_service.connectors.supabase.catalog import SupabaseCatalog
-from connector_service.connectors.supabase.connection_schemas import (
-    ProviderConnectionResponse,
-    SupabaseOAuthCallbackResponse,
-    SupabaseOAuthStart,
-    SupabaseOAuthStartResponse,
-    SupabaseProjectSelection,
-    SupabaseProjectSummary,
-    TableDescription,
-    TableQuery,
-    TableQueryResponse,
-    TableSummary,
-    validate_catalog_identifier,
-)
-from connector_service.connectors.supabase.management import (
-    OAuthTokens,
-    SupabaseManagementClient,
-)
 from connector_service.core.exceptions import (
     ConflictError,
     InvalidRequestError,
@@ -45,6 +27,25 @@ from connector_service.db.repositories import (
     consume_oauth_attempt,
     get_connection_for_project,
     list_connections_for_project,
+)
+from connector_service.providers.catalog import ProviderCatalog
+from connector_service.providers.supabase.catalog import SupabaseCatalog
+from connector_service.providers.supabase.connection_schemas import (
+    ProviderConnectionResponse,
+    SupabaseOAuthCallbackResponse,
+    SupabaseOAuthStart,
+    SupabaseOAuthStartResponse,
+    SupabaseProjectSelection,
+    SupabaseProjectSummary,
+    TableDescription,
+    TableQuery,
+    TableQueryResponse,
+    TableSummary,
+    validate_catalog_identifier,
+)
+from connector_service.providers.supabase.management import (
+    OAuthTokens,
+    SupabaseManagementClient,
 )
 from connector_service.query_governance import (
     complete_query_audit,
@@ -63,7 +64,7 @@ def start_authorization(
     project: Annotated[Project, Depends(require_project)],
 ) -> SupabaseOAuthStartResponse:
     settings: Settings = request.app.state.settings
-    client: SupabaseManagementClient = request.app.state.supabase_management
+    client = _management_client(request)
     cipher: CredentialCipher = request.app.state.credential_cipher
     material = create_oauth_material()
     expires_at = datetime.now(UTC) + timedelta(seconds=settings.supabase_oauth_attempt_ttl_seconds)
@@ -116,7 +117,7 @@ async def complete_authorization(
     code_verifier = context.get("code_verifier")
     if not isinstance(code_verifier, str) or not code_verifier:
         raise InvalidRequestError("The stored OAuth attempt is invalid.")
-    client: SupabaseManagementClient = request.app.state.supabase_management
+    client = _management_client(request)
     tokens = await client.exchange_code(code=code, code_verifier=code_verifier)
     connection = ProviderConnection(
         project_id=attempt.project_id,
@@ -158,7 +159,7 @@ async def list_available_projects(
         project_id=project.id,
     )
     access_token = await _valid_access_token(connection, request, session)
-    client: SupabaseManagementClient = request.app.state.supabase_management
+    client = _management_client(request)
     provider_projects = await client.list_projects(access_token)
     return [_project_summary(item) for item in provider_projects]
 
@@ -180,7 +181,7 @@ async def select_project(
         project_id=project.id,
     )
     access_token = await _valid_access_token(connection, request, session)
-    client: SupabaseManagementClient = request.app.state.supabase_management
+    client = _management_client(request)
     provider_projects = await client.list_projects(access_token)
     selected = next(
         (item for item in provider_projects if item.get("ref") == body.project_ref),
@@ -213,7 +214,7 @@ async def list_tables(
         session=session,
         project=project,
     )
-    catalog = SupabaseCatalog(request.app.state.supabase_management)
+    catalog = SupabaseCatalog(_management_client(request))
     return await catalog.list_tables(
         access_token=access_token,
         project_ref=_project_ref(connection),
@@ -240,7 +241,7 @@ async def describe_table(
         session=session,
         project=project,
     )
-    catalog = SupabaseCatalog(request.app.state.supabase_management)
+    catalog = SupabaseCatalog(_management_client(request))
     return await catalog.describe_table(
         access_token=access_token,
         project_ref=_project_ref(connection),
@@ -263,7 +264,7 @@ async def query_table(
         session=session,
         project=project,
     )
-    catalog = SupabaseCatalog(request.app.state.supabase_management)
+    catalog = SupabaseCatalog(_management_client(request))
     audit = start_query_audit(
         session,
         request=request,
@@ -301,7 +302,7 @@ async def disconnect(
     )
     cipher: CredentialCipher = request.app.state.credential_cipher
     tokens = OAuthTokens.from_secret(cipher.decrypt(connection.encrypted_secret))
-    client: SupabaseManagementClient = request.app.state.supabase_management
+    client = _management_client(request)
     await client.revoke(tokens.refresh_token)
     connection.status = "disconnected"
     connection.encrypted_secret = cipher.encrypt({"revoked": True})
@@ -335,7 +336,7 @@ async def _valid_access_token(
     tokens = OAuthTokens.from_secret(cipher.decrypt(connection.encrypted_secret))
     refresh_at = datetime.now(UTC) + timedelta(seconds=settings.supabase_oauth_token_skew_seconds)
     if tokens.expires_at <= refresh_at:
-        client: SupabaseManagementClient = request.app.state.supabase_management
+        client = _management_client(request)
         tokens = await client.refresh_tokens(tokens.refresh_token)
         connection.encrypted_secret = cipher.encrypt(tokens.secret_document())
         connection.token_expires_at = tokens.expires_at
@@ -373,3 +374,8 @@ def _project_ref(connection: ProviderConnection) -> str:
     if connection.external_ref is None:
         raise InvalidRequestError("Select a Supabase project before querying this connection.")
     return connection.external_ref
+
+
+def _management_client(request: Request) -> SupabaseManagementClient:
+    providers: ProviderCatalog = request.app.state.providers
+    return providers.require_service("supabase", SupabaseManagementClient)

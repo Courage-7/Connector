@@ -157,3 +157,21 @@ def test_mcp_email_send_requires_approval_and_mail_content_is_untrusted() -> Non
 def test_mcp_settings_reject_plain_http_outside_localhost() -> None:
     with pytest.raises(ValueError, match="HTTPS"):
         MCPSettings(base_url="http://connector.example.com", api_key="consumer-secret")
+
+
+def test_mcp_connection_discovery_uses_only_selected_providers() -> None:
+    observed_paths: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        observed_paths.append(request.url.path)
+        return httpx.Response(200, json=[])
+
+    settings = MCPSettings(
+        base_url="https://connector.example.com",
+        api_key="consumer-secret",
+        enabled_providers="gmail",
+    )
+    client = ConnectorAgentClient(settings, transport=httpx.MockTransport(handler))
+
+    assert asyncio.run(client.list_connections()) == []
+    assert observed_paths == ["/v1/connections/gmail"]

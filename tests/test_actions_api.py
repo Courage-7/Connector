@@ -6,7 +6,7 @@ from typing import Any
 import httpx
 from fastapi.testclient import TestClient
 
-from connector_service.connectors.supabase.connector import SupabaseConnector
+from connector_service.providers.supabase.connector import SupabaseConnector
 
 
 def install_transport(app, settings, handler) -> None:

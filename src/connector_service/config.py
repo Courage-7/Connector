@@ -7,6 +7,8 @@ from functools import lru_cache
 from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+SUPPORTED_PROVIDERS = frozenset({"gmail", "outlook", "supabase"})
+
 
 class Settings(BaseSettings):
     """Validated runtime configuration.
@@ -34,6 +36,7 @@ class Settings(BaseSettings):
     provider_retry_base_seconds: float = Field(default=0.25, ge=0, le=5)
     max_provider_response_bytes: int = Field(default=5 * 1024 * 1024, ge=1024, le=50 * 1024 * 1024)
     max_page_size: int = Field(default=100, ge=1, le=1000)
+    enabled_providers: str = "supabase,outlook,gmail"
     supabase_oauth_client_id: str | None = None
     supabase_oauth_client_secret: SecretStr | None = None
     supabase_oauth_redirect_uri: str = "http://localhost:8000/v1/connections/supabase/callback"
@@ -80,6 +83,21 @@ class Settings(BaseSettings):
         if normalized not in {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}:
             raise ValueError("unsupported log level")
         return normalized
+
+    @field_validator("enabled_providers")
+    @classmethod
+    def normalize_enabled_providers(cls, value: str) -> str:
+        names = [item.strip().lower() for item in value.split(",") if item.strip()]
+        if not names:
+            raise ValueError("at least one provider must be enabled")
+        unknown = sorted(set(names) - SUPPORTED_PROVIDERS)
+        if unknown:
+            raise ValueError(f"unsupported providers: {', '.join(unknown)}")
+        return ",".join(dict.fromkeys(names))
+
+    @property
+    def enabled_provider_names(self) -> tuple[str, ...]:
+        return tuple(self.enabled_providers.split(","))
 
     @model_validator(mode="after")
     def validate_supabase_oauth_configuration(self) -> Settings:

@@ -7,8 +7,8 @@ from datetime import UTC, datetime
 from fastapi import Request
 from sqlalchemy.orm import Session
 
-from connector_service.connectors.supabase.connection_schemas import TableQuery
 from connector_service.db.models import Project, ProviderConnection, QueryAuditRecord
+from connector_service.providers.supabase.connection_schemas import TableQuery
 
 
 def start_query_audit(

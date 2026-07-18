@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import re
 import uuid
-from collections.abc import AsyncIterator, Awaitable, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable, Mapping
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -26,16 +26,20 @@ from connector_service.api import (
     email_connections,
     health,
 )
+from connector_service.api import (
+    providers as provider_routes,
+)
 from connector_service.config import Settings, get_settings
-from connector_service.connectors.email import GmailClient, OutlookClient
-from connector_service.connectors.supabase import SupabaseConnector
-from connector_service.connectors.supabase.management import SupabaseManagementClient
 from connector_service.core.exceptions import ServiceError
 from connector_service.core.pagination import CursorCodec
 from connector_service.core.registry import ConnectorRegistry
 from connector_service.core.security import CredentialCipher
 from connector_service.db.session import Database
 from connector_service.observability import configure_logging, request_id_context
+from connector_service.providers import (
+    ProviderCapability,
+    build_provider_catalog,
+)
 
 REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 logger = logging.getLogger(__name__)
@@ -47,6 +51,7 @@ def create_app(
     supabase_management_transport: httpx.AsyncBaseTransport | None = None,
     outlook_transport: httpx.AsyncBaseTransport | None = None,
     gmail_transport: httpx.AsyncBaseTransport | None = None,
+    provider_transports: Mapping[str, httpx.AsyncBaseTransport] | None = None,
 ) -> FastAPI:
     runtime_settings = settings or get_settings()
     configure_logging(runtime_settings.log_level)
@@ -55,16 +60,22 @@ def create_app(
         runtime_settings.credential_encryption_key.get_secret_value()
     )
     cursor_codec = CursorCodec(runtime_settings.cursor_signing_key.get_secret_value())
-    registry = ConnectorRegistry()
-    registry.register(SupabaseConnector(runtime_settings, cursor_codec))
-    supabase_management = SupabaseManagementClient(
+    transports = dict(provider_transports or {})
+    for name, transport in {
+        "supabase": supabase_management_transport,
+        "outlook": outlook_transport,
+        "gmail": gmail_transport,
+    }.items():
+        if transport is not None:
+            transports[name] = transport
+    providers = build_provider_catalog(
         runtime_settings,
-        transport=supabase_management_transport,
+        cursor_codec,
+        transports=transports,
     )
-    email_clients = {
-        "outlook": OutlookClient(runtime_settings, transport=outlook_transport),
-        "gmail": GmailClient(runtime_settings, transport=gmail_transport),
-    }
+    registry = ConnectorRegistry()
+    for connector in providers.connectors():
+        registry.register(connector)
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
@@ -84,8 +95,7 @@ def create_app(
     app.state.credential_cipher = credential_cipher
     app.state.cursor_codec = cursor_codec
     app.state.registry = registry
-    app.state.supabase_management = supabase_management
-    app.state.email_clients = email_clients
+    app.state.providers = providers
 
     @app.middleware("http")
     async def request_context(
@@ -156,13 +166,17 @@ def create_app(
     app.include_router(health.router)
     app.include_router(admin.router)
     app.include_router(dashboard.router)
-    app.include_router(connections.router)
-    app.include_router(email_connections.router)
-    app.include_router(agent.agent_router)
-    app.include_router(agent.dashboard_router)
-    app.include_router(email_agent.agent_router)
-    app.include_router(email_agent.dashboard_router)
-    app.include_router(actions.router)
+    app.include_router(provider_routes.router)
+    if providers.has_capability(ProviderCapability.DATABASE):
+        app.include_router(connections.router)
+        app.include_router(agent.agent_router)
+        app.include_router(agent.dashboard_router)
+    if providers.has_capability(ProviderCapability.EMAIL):
+        app.include_router(email_connections.router)
+        app.include_router(email_agent.agent_router)
+        app.include_router(email_agent.dashboard_router)
+    if providers.has_capability(ProviderCapability.ACTIONS):
+        app.include_router(actions.router)
     web_dist = Path(__file__).with_name("web_dist")
     if web_dist.is_dir():
 

@@ -8,8 +8,8 @@ from typing import Any
 
 from pydantic import Field, field_validator
 
-from connector_service.connectors.supabase.schemas import SortDirection
 from connector_service.core.contracts import StrictModel
+from connector_service.providers.supabase.schemas import SortDirection
 
 
 class SupabaseOAuthStart(StrictModel):

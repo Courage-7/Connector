@@ -7,12 +7,12 @@ from typing import Any
 
 import httpx
 
-from connector_service.connectors.supabase.schemas import RowFilter, RowOrder
 from connector_service.core.exceptions import (
     ProviderAccessError,
     ProviderRequestError,
     ProviderUnavailableError,
 )
+from connector_service.providers.supabase.schemas import RowFilter, RowOrder
 
 
 class SupabaseDataClient:

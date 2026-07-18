@@ -8,17 +8,6 @@ import httpx
 from pydantic import ValidationError
 
 from connector_service.config import Settings
-from connector_service.connectors.supabase.client import SupabaseDataClient
-from connector_service.connectors.supabase.schemas import (
-    CallRpcInput,
-    DescribeResourceInput,
-    GetRowInput,
-    ListResourcesInput,
-    ListRowsInput,
-    ResourcePolicy,
-    SupabaseAction,
-    SupabaseGrantPolicy,
-)
 from connector_service.core.contracts import (
     ActionExecutionResponse,
     ActionMeta,
@@ -32,6 +21,17 @@ from connector_service.core.exceptions import (
 )
 from connector_service.core.pagination import CursorCodec, query_fingerprint
 from connector_service.core.registry import ActionContext
+from connector_service.providers.supabase.client import SupabaseDataClient
+from connector_service.providers.supabase.schemas import (
+    CallRpcInput,
+    DescribeResourceInput,
+    GetRowInput,
+    ListResourcesInput,
+    ListRowsInput,
+    ResourcePolicy,
+    SupabaseAction,
+    SupabaseGrantPolicy,
+)
 
 
 class SupabaseConnector:
@@ -184,7 +184,7 @@ class SupabaseConnector:
         if resource.id_column is None:
             raise AuthorizationError("Row lookup is not enabled for this resource.")
         columns = self._columns(resource, request.columns)
-        from connector_service.connectors.supabase.schemas import FilterOperator, RowFilter
+        from connector_service.providers.supabase.schemas import FilterOperator, RowFilter
 
         rows = await client.list_rows(
             resource=resource.resource,

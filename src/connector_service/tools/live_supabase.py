@@ -16,7 +16,7 @@ from fastapi.testclient import TestClient
 
 from connector_service.app import create_app
 from connector_service.config import Settings
-from connector_service.connectors.supabase.schemas import validate_identifier
+from connector_service.providers.supabase.schemas import validate_identifier
 
 
 def _first_environment_value(*names: str) -> str:

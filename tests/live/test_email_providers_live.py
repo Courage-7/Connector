@@ -43,7 +43,7 @@ def test_real_email_refresh_read_approved_send_and_sent_state(
         pytest.skip("Gmail OAuth client credentials are not configured in .env.")
 
     app = create_app(settings)
-    provider_client = app.state.email_clients[provider.value]
+    provider_client = app.state.providers.email_client(provider.value)
     tokens = asyncio.run(provider_client.refresh_tokens(str(refresh_token)))
     external_ref, mailbox_name = asyncio.run(provider_client.identity(tokens.access_token))
     marker = f"connector-live-{provider.value}-{uuid.uuid4().hex[:12]}"

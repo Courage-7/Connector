@@ -16,12 +16,6 @@ from connector_service.api.dependencies import (
     require_dashboard_project,
     require_project,
 )
-from connector_service.connectors.supabase.catalog import SupabaseCatalog
-from connector_service.connectors.supabase.connection_schemas import (
-    TableQuery,
-    TableQueryResponse,
-    validate_catalog_identifier,
-)
 from connector_service.core.contracts import StrictModel
 from connector_service.core.exceptions import (
     AuthorizationError,
@@ -36,6 +30,14 @@ from connector_service.db.models import (
     QueryAuditRecord,
 )
 from connector_service.db.repositories import get_connection_for_project
+from connector_service.providers.catalog import ProviderCatalog
+from connector_service.providers.supabase.catalog import SupabaseCatalog
+from connector_service.providers.supabase.connection_schemas import (
+    TableQuery,
+    TableQueryResponse,
+    validate_catalog_identifier,
+)
+from connector_service.providers.supabase.management import SupabaseManagementClient
 from connector_service.query_governance import (
     complete_query_audit,
     fail_query_audit,
@@ -140,7 +142,8 @@ async def request_agent_query(
             details={"max_rows": policy.max_rows},
         )
 
-    catalog = SupabaseCatalog(request.app.state.supabase_management)
+    providers: ProviderCatalog = request.app.state.providers
+    catalog = SupabaseCatalog(providers.require_service("supabase", SupabaseManagementClient))
     description = await catalog.describe_table(
         access_token=access_token,
         project_ref=_project_ref(connection),
@@ -210,7 +213,8 @@ async def execute_agent_query(
         actor_type="agent",
         query_request_id=query_request.id,
     )
-    catalog = SupabaseCatalog(request.app.state.supabase_management)
+    providers: ProviderCatalog = request.app.state.providers
+    catalog = SupabaseCatalog(providers.require_service("supabase", SupabaseManagementClient))
     try:
         rows = await catalog.query_table(
             access_token=access_token,

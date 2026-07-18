@@ -39,6 +39,8 @@
 
 ## Milestone 5 — Reuse interfaces
 
+- [x] Isolate provider implementations and compose one or many through a typed provider catalog.
+- [x] Add deployment-level provider selection and authenticated provider discovery.
 - Typed Python client.
 - Two consuming-project examples and connector contract tests.
 - Deployment, secret rotation, revocation, and incident runbooks.

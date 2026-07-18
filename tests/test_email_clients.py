@@ -7,9 +7,9 @@ import json
 import httpx
 from pydantic import SecretStr
 
-from connector_service.connectors.email.gmail import GmailClient
-from connector_service.connectors.email.outlook import OutlookClient
 from connector_service.connectors.email.schemas import EmailCompose, MessageSearch
+from connector_service.providers.gmail.client import GmailClient
+from connector_service.providers.outlook.client import OutlookClient
 
 
 def test_outlook_read_search_attachments_and_draft(settings) -> None:

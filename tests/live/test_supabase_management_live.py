@@ -8,9 +8,9 @@ from cryptography.fernet import Fernet
 from dotenv import load_dotenv
 
 from connector_service.config import Settings
-from connector_service.connectors.supabase.catalog import SupabaseCatalog
-from connector_service.connectors.supabase.connection_schemas import TableQuery
-from connector_service.connectors.supabase.management import SupabaseManagementClient
+from connector_service.providers.supabase.catalog import SupabaseCatalog
+from connector_service.providers.supabase.connection_schemas import TableQuery
+from connector_service.providers.supabase.management import SupabaseManagementClient
 
 
 def _required(name: str) -> str:
