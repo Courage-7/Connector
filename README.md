@@ -28,6 +28,10 @@ discover enabled capabilities and configuration readiness. See
 [`docs/architecture/provider-modules.md`](docs/architecture/provider-modules.md) for the extension
 contract and package layout.
 
+For a click-by-click guide to generating local secrets and obtaining every Supabase, Microsoft,
+Google, dashboard, and MCP environment value, see
+[`docs/configuration/environment-setup.md`](docs/configuration/environment-setup.md).
+
 ## Current capabilities
 
 ### Supabase
@@ -99,7 +103,7 @@ its backend; do not place a connector-service API key in browser JavaScript.
 2. Create an OAuth application.
 3. Add this callback URL for local development:
 
-   `http://localhost:8000/v1/connections/supabase/callback`
+   `http://localhost:8010/v1/connections/supabase/callback`
 
 4. Grant only these OAuth scopes:
 
@@ -111,7 +115,7 @@ its backend; do not place a connector-service API key in browser JavaScript.
 ```dotenv
 CONNECTOR_SUPABASE_OAUTH_CLIENT_ID=...
 CONNECTOR_SUPABASE_OAUTH_CLIENT_SECRET=...
-CONNECTOR_SUPABASE_OAUTH_REDIRECT_URI=http://localhost:8000/v1/connections/supabase/callback
+CONNECTOR_SUPABASE_OAUTH_REDIRECT_URI=http://localhost:8010/v1/connections/supabase/callback
 ```
 
 Scopes are configured on the OAuth application, not sent as an authorization-URL parameter. Users
@@ -126,7 +130,7 @@ and [scope reference](https://supabase.com/docs/guides/integrations/build-a-supa
 Create an app registration in Microsoft Entra ID, add this Web redirect URI, and create a client
 secret:
 
-`http://localhost:8000/v1/connections/outlook/callback`
+`http://localhost:8010/v1/connections/outlook/callback`
 
 Grant delegated permissions `openid`, `profile`, `email`, `offline_access`, `User.Read`,
 `Mail.ReadWrite`, `Mail.Send`, `Calendars.ReadWrite`, `Team.ReadBasic.All`,
@@ -135,7 +139,7 @@ Grant delegated permissions `openid`, `profile`, `email`, `offline_access`, `Use
 ```dotenv
 CONNECTOR_OUTLOOK_OAUTH_CLIENT_ID=...
 CONNECTOR_OUTLOOK_OAUTH_CLIENT_SECRET=...
-CONNECTOR_OUTLOOK_OAUTH_REDIRECT_URI=http://localhost:8000/v1/connections/outlook/callback
+CONNECTOR_OUTLOOK_OAUTH_REDIRECT_URI=http://localhost:8010/v1/connections/outlook/callback
 ```
 
 ### Google Gmail
@@ -143,7 +147,7 @@ CONNECTOR_OUTLOOK_OAUTH_REDIRECT_URI=http://localhost:8000/v1/connections/outloo
 Create a Web application OAuth client in Google Cloud, enable the Gmail and Google Calendar APIs,
 configure the OAuth consent screen, and add this authorized redirect URI:
 
-`http://localhost:8000/v1/connections/gmail/callback`
+`http://localhost:8010/v1/connections/gmail/callback`
 
 The service requests `openid`, `email`, `gmail.readonly`, `gmail.compose`, and `calendar.events`,
 then uses:
@@ -151,7 +155,7 @@ then uses:
 ```dotenv
 CONNECTOR_GMAIL_OAUTH_CLIENT_ID=...
 CONNECTOR_GMAIL_OAUTH_CLIENT_SECRET=...
-CONNECTOR_GMAIL_OAUTH_REDIRECT_URI=http://localhost:8000/v1/connections/gmail/callback
+CONNECTOR_GMAIL_OAUTH_REDIRECT_URI=http://localhost:8010/v1/connections/gmail/callback
 CONNECTOR_GOOGLE_CALENDAR_API_URL=https://www.googleapis.com/calendar/v3
 ```
 
@@ -185,22 +189,22 @@ Create the schema and start the API:
 
 ```powershell
 alembic upgrade head
-uvicorn connector_service.main:app --reload
+python -m uvicorn connector_service.main:app --reload --port 8010
 ```
 
 OpenAPI documentation is available at:
 
-- Swagger UI: `http://127.0.0.1:8000/docs`
-- ReDoc: `http://127.0.0.1:8000/redoc`
-- OpenAPI JSON: `http://127.0.0.1:8000/openapi.json`
+- Swagger UI: `http://127.0.0.1:8010/docs`
+- ReDoc: `http://127.0.0.1:8010/redoc`
+- OpenAPI JSON: `http://127.0.0.1:8010/openapi.json`
 
 In Swagger, select **Authorize** and enter either the consuming project's `X-API-Key` under
 `ProjectApiKey` or the service administration token under `AdminToken`.
 
 ## Open the secure dashboard
 
-Create `.env.consumer` from `.env.consumer.example` and set the consumer project ID and its
-one-time API key. Keep this file outside source control. With the API running, open the dashboard
+Create `.env.consumer` from `.env.consumer.example` and set its one-time project API key. Keep this
+file outside source control. With the API running, open the dashboard
 through a short-lived, single-use login ticket:
 
 ```powershell

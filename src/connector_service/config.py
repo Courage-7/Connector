@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     enabled_providers: str = "supabase,outlook,gmail"
     supabase_oauth_client_id: str | None = None
     supabase_oauth_client_secret: SecretStr | None = None
-    supabase_oauth_redirect_uri: str = "http://localhost:8000/v1/connections/supabase/callback"
+    supabase_oauth_redirect_uri: str = "http://localhost:8010/v1/connections/supabase/callback"
     supabase_management_api_url: str = "https://api.supabase.com"
     supabase_oauth_attempt_ttl_seconds: int = Field(default=600, ge=60, le=1800)
     supabase_oauth_token_skew_seconds: int = Field(default=60, ge=0, le=300)
@@ -48,12 +48,12 @@ class Settings(BaseSettings):
     email_send_approval_ttl_seconds: int = Field(default=30 * 60, ge=60, le=24 * 60 * 60)
     outlook_oauth_client_id: str | None = None
     outlook_oauth_client_secret: SecretStr | None = None
-    outlook_oauth_redirect_uri: str = "http://localhost:8000/v1/connections/outlook/callback"
+    outlook_oauth_redirect_uri: str = "http://localhost:8010/v1/connections/outlook/callback"
     outlook_oauth_authority: str = "https://login.microsoftonline.com/common/oauth2/v2.0"
     outlook_graph_api_url: str = "https://graph.microsoft.com/v1.0"
     gmail_oauth_client_id: str | None = None
     gmail_oauth_client_secret: SecretStr | None = None
-    gmail_oauth_redirect_uri: str = "http://localhost:8000/v1/connections/gmail/callback"
+    gmail_oauth_redirect_uri: str = "http://localhost:8010/v1/connections/gmail/callback"
     gmail_oauth_authority: str = "https://accounts.google.com/o/oauth2/v2"
     gmail_token_url: str = "https://oauth2.googleapis.com"
     gmail_userinfo_url: str = "https://openidconnect.googleapis.com/v1"

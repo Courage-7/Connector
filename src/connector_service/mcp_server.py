@@ -30,7 +30,7 @@ class MCPSettings(BaseSettings):
     )
 
     base_url: str = Field(
-        default="http://[::1]:8000",
+        default="http://127.0.0.1:8010",
         validation_alias="CONNECTOR_MCP_BASE_URL",
     )
     api_key: SecretStr = Field(
