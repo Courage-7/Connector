@@ -14,6 +14,7 @@ def build_outlook_module(
     *,
     transport: httpx.AsyncBaseTransport | None = None,
 ) -> ProviderModule:
+    client = OutlookClient(settings, transport=transport)
     return ProviderModule(
         name="outlook",
         display_name="Microsoft Outlook",
@@ -22,10 +23,14 @@ def build_outlook_module(
                 ProviderCapability.OAUTH,
                 ProviderCapability.EMAIL,
                 ProviderCapability.EMAIL_SEND,
+                ProviderCapability.CALENDAR,
+                ProviderCapability.TEAMS,
             }
         ),
         configured=bool(
             settings.outlook_oauth_client_id and settings.outlook_oauth_client_secret is not None
         ),
-        email_client=OutlookClient(settings, transport=transport),
+        email_client=client,
+        calendar_client=client,
+        teams_client=client,
     )

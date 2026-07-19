@@ -1,8 +1,9 @@
 # Connector Service
 
-A reusable FastAPI service for connecting applications and AI agents to Supabase, Outlook Mail,
-and Gmail without exposing provider credentials. Provider access uses delegated OAuth, encrypted
-token storage, bounded operations, human approval for agent writes, and redacted audit records.
+A reusable FastAPI service for connecting applications and AI agents to Supabase, Outlook, Gmail,
+Google Calendar, Outlook Calendar, and Microsoft Teams without exposing provider credentials.
+Provider access uses delegated OAuth, encrypted token storage, bounded operations, human approval
+for governed agent writes, and redacted audit records.
 
 The product flow is user-authorized: a person connects a provider in the browser, grants only the
 required scopes, and remains in control of sensitive agent operations. Supabase access is bounded
@@ -66,6 +67,14 @@ the selected schema, table, and columns against live metadata.
 - Email audit records contain action metadata and counts, never recipient addresses or body text.
 - Mailbox content returned to an agent is explicitly labeled untrusted external data.
 
+### Calendar and Microsoft Teams
+
+- Existing Outlook and Gmail OAuth connections also provide Outlook Calendar and Google Calendar.
+- Calendar routes list upcoming events and create, update, or delete events.
+- Outlook connections can list joined Teams, channels, and channel messages, and send a channel
+  message through Microsoft Graph.
+- No duplicate OAuth connection or additional database schema is required.
+
 ## Connection flow
 
 ```text
@@ -120,7 +129,8 @@ secret:
 `http://localhost:8000/v1/connections/outlook/callback`
 
 Grant delegated permissions `openid`, `profile`, `email`, `offline_access`, `User.Read`,
-`Mail.ReadWrite`, and `Mail.Send`, then configure:
+`Mail.ReadWrite`, `Mail.Send`, `Calendars.ReadWrite`, `Team.ReadBasic.All`,
+`Channel.ReadBasic.All`, `ChannelMessage.Read.All`, and `ChannelMessage.Send`, then configure:
 
 ```dotenv
 CONNECTOR_OUTLOOK_OAUTH_CLIENT_ID=...
@@ -130,17 +140,19 @@ CONNECTOR_OUTLOOK_OAUTH_REDIRECT_URI=http://localhost:8000/v1/connections/outloo
 
 ### Google Gmail
 
-Create a Web application OAuth client in Google Cloud, enable the Gmail API, configure the OAuth
-consent screen, and add this authorized redirect URI:
+Create a Web application OAuth client in Google Cloud, enable the Gmail and Google Calendar APIs,
+configure the OAuth consent screen, and add this authorized redirect URI:
 
 `http://localhost:8000/v1/connections/gmail/callback`
 
-The service requests `openid`, `email`, `gmail.readonly`, and `gmail.compose`, then uses:
+The service requests `openid`, `email`, `gmail.readonly`, `gmail.compose`, and `calendar.events`,
+then uses:
 
 ```dotenv
 CONNECTOR_GMAIL_OAUTH_CLIENT_ID=...
 CONNECTOR_GMAIL_OAUTH_CLIENT_SECRET=...
 CONNECTOR_GMAIL_OAUTH_REDIRECT_URI=http://localhost:8000/v1/connections/gmail/callback
+CONNECTOR_GOOGLE_CALENDAR_API_URL=https://www.googleapis.com/calendar/v3
 ```
 
 Gmail's mail scopes are restricted. A public production application must complete Google's OAuth
@@ -176,7 +188,14 @@ alembic upgrade head
 uvicorn connector_service.main:app --reload
 ```
 
-OpenAPI documentation is available at `http://127.0.0.1:8000/docs`.
+OpenAPI documentation is available at:
+
+- Swagger UI: `http://127.0.0.1:8000/docs`
+- ReDoc: `http://127.0.0.1:8000/redoc`
+- OpenAPI JSON: `http://127.0.0.1:8000/openapi.json`
+
+In Swagger, select **Authorize** and enter either the consuming project's `X-API-Key` under
+`ProjectApiKey` or the service administration token under `AdminToken`.
 
 ## Open the secure dashboard
 
@@ -217,7 +236,8 @@ client to launch the local stdio adapter from this project directory. A typical 
 
 The adapter reads `.env.consumer` inside its own process, so the model never needs the API key. Its
 tools cover connection listing, Supabase schema discovery and approved structured queries, mailbox
-folders, message search/detail/thread/attachment metadata, and approval-gated email sending.
+folders, message search/detail/thread/attachment metadata, calendar event reads, Teams/channel
+reads, and approval-gated email sending.
 Provider data is labeled untrusted external data. Calling the request-send tool never sends mail;
 the dashboard must approve the exact payload before the execute tool can send it once.
 
@@ -240,10 +260,12 @@ The Outlook and Gmail workflow uses the corresponding provider slug:
 1. `POST /v1/connections/{provider}/authorize`, then open `authorization_url`.
 2. The provider returns to `GET /v1/connections/{provider}/callback`.
 3. Use the connection routes for folders, message search/detail/thread data, attachments, or drafts.
-4. An agent creates a request with `POST /v1/agent/email/send-requests`.
-5. A dashboard user reviews and approves it with
+4. Use `/calendar/events` below the same connection for calendar operations.
+5. For Outlook, use `/teams` below the connection to list teams, channels, and messages.
+6. An agent creates a request with `POST /v1/agent/email/send-requests`.
+7. A dashboard user reviews and approves it with
    `POST /v1/dashboard/email/send-requests/{request_id}/approve`.
-6. The agent executes it once with `POST /v1/agent/email/send-requests/{request_id}/execute`.
+8. The agent executes it once with `POST /v1/agent/email/send-requests/{request_id}/execute`.
 
 Example structured query body:
 

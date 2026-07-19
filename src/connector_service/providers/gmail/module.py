@@ -14,6 +14,7 @@ def build_gmail_module(
     *,
     transport: httpx.AsyncBaseTransport | None = None,
 ) -> ProviderModule:
+    client = GmailClient(settings, transport=transport)
     return ProviderModule(
         name="gmail",
         display_name="Gmail",
@@ -22,10 +23,12 @@ def build_gmail_module(
                 ProviderCapability.OAUTH,
                 ProviderCapability.EMAIL,
                 ProviderCapability.EMAIL_SEND,
+                ProviderCapability.CALENDAR,
             }
         ),
         configured=bool(
             settings.gmail_oauth_client_id and settings.gmail_oauth_client_secret is not None
         ),
-        email_client=GmailClient(settings, transport=transport),
+        email_client=client,
+        calendar_client=client,
     )

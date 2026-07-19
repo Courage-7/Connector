@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import base64
-from datetime import datetime
+from datetime import UTC, datetime
 from email.message import EmailMessage
 from email.utils import getaddresses, parsedate_to_datetime
 from typing import Any
@@ -28,6 +28,12 @@ from connector_service.connectors.email.schemas import (
     MessageThread,
 )
 from connector_service.connectors.oauth import OAuthTokenSet
+from connector_service.connectors.productivity.schemas import (
+    CalendarEvent,
+    CalendarEventCreate,
+    CalendarEventPage,
+    CalendarEventUpdate,
+)
 from connector_service.core.exceptions import InvalidRequestError, ProviderRequestError
 
 GMAIL_SCOPES = (
@@ -35,6 +41,7 @@ GMAIL_SCOPES = (
     "email",
     "https://www.googleapis.com/auth/gmail.readonly",
     "https://www.googleapis.com/auth/gmail.compose",
+    "https://www.googleapis.com/auth/calendar.events",
 )
 METADATA_HEADERS = ["Subject", "From", "To", "Cc", "Bcc", "Date"]
 
@@ -237,6 +244,66 @@ class GmailClient(DefensiveProviderClient):
             json_body={"raw": _raw_message(message)},
         )
 
+    async def list_events(self, access_token: str, *, limit: int) -> CalendarEventPage:
+        payload = await self._request_json(
+            "GET",
+            "/calendars/primary/events",
+            access_token=access_token,
+            base_url=self._settings.google_calendar_api_url,
+            params={
+                "maxResults": limit,
+                "singleEvents": "true",
+                "orderBy": "startTime",
+                "timeMin": datetime.now(UTC).isoformat(),
+            },
+        )
+        items = payload.get("items") if isinstance(payload, dict) else None
+        if not isinstance(items, list) or any(not isinstance(item, dict) for item in items):
+            raise ProviderRequestError("Google Calendar returned an invalid event collection.")
+        events = [_google_calendar_event(item) for item in items[:limit]]
+        return CalendarEventPage(data=events, returned=len(events))
+
+    async def create_event(
+        self,
+        access_token: str,
+        event: CalendarEventCreate,
+    ) -> CalendarEvent:
+        payload = await self._request_json(
+            "POST",
+            "/calendars/primary/events",
+            access_token=access_token,
+            base_url=self._settings.google_calendar_api_url,
+            json_body=_google_event_payload(event),
+        )
+        if not isinstance(payload, dict):
+            raise ProviderRequestError("Google Calendar returned an invalid event.")
+        return _google_calendar_event(payload)
+
+    async def update_event(
+        self,
+        access_token: str,
+        event_id: str,
+        event: CalendarEventUpdate,
+    ) -> CalendarEvent:
+        payload = await self._request_json(
+            "PATCH",
+            f"/calendars/primary/events/{quote(event_id, safe='')}",
+            access_token=access_token,
+            base_url=self._settings.google_calendar_api_url,
+            json_body=_google_event_payload(event),
+        )
+        if not isinstance(payload, dict):
+            raise ProviderRequestError("Google Calendar returned an invalid event.")
+        return _google_calendar_event(payload)
+
+    async def delete_event(self, access_token: str, event_id: str) -> None:
+        await self._request(
+            "DELETE",
+            f"/calendars/primary/events/{quote(event_id, safe='')}",
+            access_token=access_token,
+            base_url=self._settings.google_calendar_api_url,
+        )
+
     async def _token_request(self, form: dict[str, str]) -> Any:
         client_id, client_secret = self._oauth_credentials()
         return await self._request_json(
@@ -266,6 +333,59 @@ def _raw_message(message: EmailCompose) -> str:
     if message.html_body:
         mime.add_alternative(message.html_body, subtype="html")
     return base64.urlsafe_b64encode(mime.as_bytes()).decode("ascii").rstrip("=")
+
+
+def _google_event_payload(event: CalendarEventCreate | CalendarEventUpdate) -> dict[str, Any]:
+    include_all = isinstance(event, CalendarEventCreate)
+    included = event.model_fields_set
+    payload: dict[str, Any] = {}
+    if include_all or "title" in included:
+        payload["summary"] = event.title
+    if include_all or "description" in included:
+        payload["description"] = event.description or ""
+    timezone = event.timezone or "UTC"
+    if (include_all or "start" in included) and event.start is not None:
+        payload["start"] = {"dateTime": event.start.isoformat(), "timeZone": timezone}
+    if (include_all or "end" in included) and event.end is not None:
+        payload["end"] = {"dateTime": event.end.isoformat(), "timeZone": timezone}
+    if include_all or "location" in included:
+        payload["location"] = event.location or ""
+    if include_all or "attendees" in included:
+        payload["attendees"] = [{"email": address} for address in (event.attendees or [])]
+    return payload
+
+
+def _google_calendar_event(payload: dict[str, Any]) -> CalendarEvent:
+    start = payload.get("start") if isinstance(payload.get("start"), dict) else {}
+    end = payload.get("end") if isinstance(payload.get("end"), dict) else {}
+    attendee_values = payload.get("attendees")
+    attendees: list[str] = []
+    if isinstance(attendee_values, list):
+        for attendee in attendee_values:
+            address = attendee.get("email") if isinstance(attendee, dict) else None
+            if isinstance(address, str):
+                attendees.append(address.lower())
+    return CalendarEvent(
+        id=_required_string(payload, "id"),
+        title=_optional_string(payload.get("summary")) or "(untitled)",
+        start=_google_event_datetime(start),
+        end=_google_event_datetime(end),
+        timezone=_optional_string(start.get("timeZone")),
+        description=_optional_string(payload.get("description")),
+        location=_optional_string(payload.get("location")),
+        attendees=attendees,
+        web_url=_optional_string(payload.get("htmlLink")),
+    )
+
+
+def _google_event_datetime(value: dict[str, Any]) -> datetime | None:
+    raw = value.get("dateTime") or value.get("date")
+    if not isinstance(raw, str):
+        return None
+    try:
+        return datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        return None
 
 
 def _summary(payload: Any) -> MessageSummary:

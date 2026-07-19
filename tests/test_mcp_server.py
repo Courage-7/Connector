@@ -175,3 +175,46 @@ def test_mcp_connection_discovery_uses_only_selected_providers() -> None:
 
     assert asyncio.run(client.list_connections()) == []
     assert observed_paths == ["/v1/connections/gmail"]
+
+
+def test_mcp_calendar_and_teams_reads_are_marked_untrusted() -> None:
+    observed_paths: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        observed_paths.append(request.url.path)
+        if request.url.path.endswith("/calendar/events"):
+            assert request.url.params["limit"] == "10"
+            return httpx.Response(
+                200,
+                json={"data": [{"id": "event-1", "title": "Provider content"}], "returned": 1},
+            )
+        if request.url.path.endswith("/teams"):
+            return httpx.Response(200, json=[{"id": "team-1", "name": "Engineering"}])
+        if request.url.path.endswith("/channels"):
+            return httpx.Response(200, json=[{"id": "channel-1", "name": "General"}])
+        if request.url.path.endswith("/messages"):
+            assert request.url.params["limit"] == "5"
+            return httpx.Response(
+                200,
+                json=[{"id": "message-1", "content": "Untrusted provider content"}],
+            )
+        raise AssertionError(f"Unexpected request: {request.method} {request.url}")
+
+    settings = MCPSettings(base_url="https://connector.example.com", api_key="consumer-secret")
+    client = ConnectorAgentClient(settings, transport=httpx.MockTransport(handler))
+
+    calendar = asyncio.run(client.list_calendar_events("gmail", "calendar-1", 10))
+    teams = asyncio.run(client.list_teams("outlook-1"))
+    channels = asyncio.run(client.list_team_channels("outlook-1", "team-1"))
+    messages = asyncio.run(client.list_team_channel_messages("outlook-1", "team-1", "channel-1", 5))
+
+    assert calendar["content_trust"] == "untrusted_external_data"
+    assert teams["content_trust"] == "untrusted_external_data"
+    assert channels["data"][0]["name"] == "General"
+    assert messages["data"][0]["id"] == "message-1"
+    assert observed_paths == [
+        "/v1/connections/gmail/calendar-1/calendar/events",
+        "/v1/connections/outlook/outlook-1/teams",
+        "/v1/connections/outlook/outlook-1/teams/team-1/channels",
+        "/v1/connections/outlook/outlook-1/teams/team-1/channels/channel-1/messages",
+    ]

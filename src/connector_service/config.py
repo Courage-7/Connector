@@ -58,6 +58,7 @@ class Settings(BaseSettings):
     gmail_token_url: str = "https://oauth2.googleapis.com"
     gmail_userinfo_url: str = "https://openidconnect.googleapis.com/v1"
     gmail_api_url: str = "https://gmail.googleapis.com/gmail/v1"
+    google_calendar_api_url: str = "https://www.googleapis.com/calendar/v3"
     dashboard_login_ticket_ttl_seconds: int = Field(default=120, ge=30, le=600)
     dashboard_session_ttl_seconds: int = Field(default=8 * 60 * 60, ge=300, le=7 * 24 * 60 * 60)
 
@@ -134,6 +135,7 @@ class Settings(BaseSettings):
             "gmail_token_url": self.gmail_token_url,
             "gmail_userinfo_url": self.gmail_userinfo_url,
             "gmail_api_url": self.gmail_api_url,
+            "google_calendar_api_url": self.google_calendar_api_url,
         }.items():
             if not value.startswith("https://"):
                 raise ValueError(f"{name} must use HTTPS")

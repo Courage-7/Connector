@@ -25,6 +25,7 @@ from connector_service.api import (
     email_agent,
     email_connections,
     health,
+    productivity,
 )
 from connector_service.api import (
     providers as provider_routes,
@@ -87,7 +88,14 @@ def create_app(
     app = FastAPI(
         title=runtime_settings.app_name,
         version="0.1.0",
-        description="Policy-enforced access to reusable provider connectors.",
+        description=(
+            "Policy-enforced access to Supabase, Outlook, Gmail, Calendar, and Microsoft Teams. "
+            "Use Authorize in Swagger with either ProjectApiKey or AdminToken."
+        ),
+        docs_url="/docs",
+        redoc_url="/redoc",
+        openapi_url="/openapi.json",
+        swagger_ui_parameters={"persistAuthorization": True, "displayRequestDuration": True},
         lifespan=lifespan,
     )
     app.state.settings = runtime_settings
@@ -175,6 +183,10 @@ def create_app(
         app.include_router(email_connections.router)
         app.include_router(email_agent.agent_router)
         app.include_router(email_agent.dashboard_router)
+    if providers.has_capability(ProviderCapability.CALENDAR):
+        app.include_router(productivity.calendar_router)
+    if providers.has_capability(ProviderCapability.TEAMS):
+        app.include_router(productivity.teams_router)
     if providers.has_capability(ProviderCapability.ACTIONS):
         app.include_router(actions.router)
     web_dist = Path(__file__).with_name("web_dist")

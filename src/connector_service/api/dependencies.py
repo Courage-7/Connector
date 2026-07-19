@@ -6,7 +6,8 @@ from collections.abc import Generator
 from datetime import UTC, datetime
 from typing import Annotated
 
-from fastapi import Depends, Header, Request
+from fastapi import Depends, Request, Security
+from fastapi.security import APIKeyHeader
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -16,6 +17,19 @@ from connector_service.core.security import digest_opaque_token, secrets_equal
 from connector_service.db.models import DashboardSession, Project
 from connector_service.db.repositories import authenticate_project
 
+admin_token_header = APIKeyHeader(
+    name="X-Admin-Token",
+    scheme_name="AdminToken",
+    description="Service administration token.",
+    auto_error=False,
+)
+project_api_key_header = APIKeyHeader(
+    name="X-API-Key",
+    scheme_name="ProjectApiKey",
+    description="One-time-issued API key for a consuming project.",
+    auto_error=False,
+)
+
 
 def get_session(request: Request) -> Generator[Session, None, None]:
     with request.app.state.database.session_maker() as session:
@@ -24,7 +38,7 @@ def get_session(request: Request) -> Generator[Session, None, None]:
 
 def require_admin(
     request: Request,
-    x_admin_token: Annotated[str | None, Header(alias="X-Admin-Token")] = None,
+    x_admin_token: Annotated[str | None, Security(admin_token_header)] = None,
 ) -> None:
     settings: Settings = request.app.state.settings
     if x_admin_token is None or not secrets_equal(
@@ -36,7 +50,7 @@ def require_admin(
 def require_project(
     request: Request,
     session: Annotated[Session, Depends(get_session)],
-    x_api_key: Annotated[str | None, Header(alias="X-API-Key")] = None,
+    x_api_key: Annotated[str | None, Security(project_api_key_header)] = None,
 ) -> Project:
     if x_api_key is not None:
         request.state.auth_mode = "api_key"

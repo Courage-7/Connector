@@ -39,6 +39,8 @@ def test_app_constructs_only_selected_provider_modules(
     has_email = bool(expected.intersection({"gmail", "outlook"}))
     assert ("/v1/connections/supabase/authorize" in paths) is has_database
     assert ("/v1/connections/{provider}/authorize" in paths) is has_email
+    assert ("/v1/connections/{provider}/{connection_id}/calendar/events" in paths) is has_email
+    assert ("/v1/connections/outlook/{connection_id}/teams" in paths) is ("outlook" in expected)
     assert ("/v1/actions/{connector}/{action}" in paths) is has_database
 
 
@@ -51,6 +53,9 @@ def test_provider_capabilities_are_discoverable(settings: Settings) -> None:
 
     assert ProviderCapability.EMAIL_SEND in gmail.capabilities
     assert ProviderCapability.EMAIL_SEND in outlook.capabilities
+    assert ProviderCapability.CALENDAR in gmail.capabilities
+    assert ProviderCapability.CALENDAR in outlook.capabilities
+    assert ProviderCapability.TEAMS in outlook.capabilities
     assert ProviderCapability.DATABASE in supabase.capabilities
     assert ProviderCapability.ACTIONS in supabase.capabilities
 
@@ -71,3 +76,17 @@ def test_provider_discovery_returns_enabled_modules(client, provision) -> None:
         "outlook",
         "supabase",
     }
+
+
+def test_swagger_and_openapi_expose_authentication(client) -> None:
+    docs = client.get("/docs")
+    redoc = client.get("/redoc")
+    schema = client.get("/openapi.json")
+
+    assert docs.status_code == 200
+    assert "Swagger UI" in docs.text
+    assert redoc.status_code == 200
+    assert schema.status_code == 200
+    security_schemes = schema.json()["components"]["securitySchemes"]
+    assert security_schemes["AdminToken"]["name"] == "X-Admin-Token"
+    assert security_schemes["ProjectApiKey"]["name"] == "X-API-Key"

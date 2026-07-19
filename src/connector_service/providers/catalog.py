@@ -9,6 +9,7 @@ from types import MappingProxyType
 from typing import Any, TypeVar, cast
 
 from connector_service.connectors.email.base import EmailClient
+from connector_service.connectors.productivity.base import CalendarClient, TeamsClient
 from connector_service.core.exceptions import NotFoundError
 from connector_service.core.registry import Connector
 
@@ -17,10 +18,12 @@ class ProviderCapability(StrEnum):
     """Provider-neutral features used to compose routes and agent surfaces."""
 
     ACTIONS = "actions"
+    CALENDAR = "calendar"
     DATABASE = "database"
     EMAIL = "email"
     EMAIL_SEND = "email.send"
     OAUTH = "oauth"
+    TEAMS = "teams"
 
 
 @dataclass(frozen=True, slots=True)
@@ -33,6 +36,8 @@ class ProviderModule:
     configured: bool
     connectors: tuple[Connector, ...] = ()
     email_client: EmailClient | None = None
+    calendar_client: CalendarClient | None = None
+    teams_client: TeamsClient | None = None
     services: Mapping[type[Any], object] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -75,6 +80,18 @@ class ProviderCatalog:
         client = self.get(name).email_client
         if client is None:
             raise NotFoundError("The requested provider does not expose mailbox tools.")
+        return client
+
+    def calendar_client(self, name: str) -> CalendarClient:
+        client = self.get(name).calendar_client
+        if client is None:
+            raise NotFoundError("The requested provider does not expose calendar tools.")
+        return client
+
+    def teams_client(self, name: str = "outlook") -> TeamsClient:
+        client = self.get(name).teams_client
+        if client is None:
+            raise NotFoundError("The requested provider does not expose Microsoft Teams tools.")
         return client
 
     def require_service(self, name: str, service_type: type[T]) -> T:
