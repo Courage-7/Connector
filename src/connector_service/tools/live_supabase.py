@@ -278,7 +278,6 @@ def _expect_success(response: Any) -> dict[str, Any]:
 
 
 def load_live_environment() -> None:
-    load_dotenv(".env", override=False)
     load_dotenv(".env.live", override=False)
 
 

@@ -197,6 +197,7 @@ OpenAPI documentation is available at:
 - Swagger UI: `http://127.0.0.1:8010/docs`
 - ReDoc: `http://127.0.0.1:8010/redoc`
 - OpenAPI JSON: `http://127.0.0.1:8010/openapi.json`
+- Complete endpoint, schema, and use-case guide: [`docs/api-and-swagger-guide.md`](docs/api-and-swagger-guide.md)
 
 In Swagger, select **Authorize** and enter either the consuming project's `X-API-Key` under
 `ProjectApiKey` or the service administration token under `AdminToken`.
@@ -301,10 +302,10 @@ npm run test -- --run
 npm run build
 ```
 
-Real-provider acceptance is deliberately separate from the deterministic suite. For Supabase, copy
-`.env.live.example` to `.env.live` and populate the temporary Management API credentials. For mail,
-copy `.env.email.live.example` to `.env.email.live`, add disposable Outlook/Gmail refresh tokens and
-sink mailbox addresses, and explicitly enable sending only when those inboxes are safe to use.
+Real-provider acceptance is deliberately separate from the deterministic suite. Copy
+`.env.live.example` to `.env.live`, then populate only the Supabase, Outlook, or Gmail section you
+intend to test. Email live tests use disposable refresh tokens and sink mailbox addresses; sending
+must be explicitly enabled only when those controlled inboxes are safe to use.
 
 ```powershell
 python -m pytest -m live tests/live

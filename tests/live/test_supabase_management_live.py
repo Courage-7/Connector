@@ -22,7 +22,6 @@ def _required(name: str) -> str:
 
 @pytest.mark.live
 def test_real_management_api_discovery_and_table_query() -> None:
-    load_dotenv(".env", override=False)
     load_dotenv(".env.live", override=False)
     access_token = _required("SUPABASE_MANAGEMENT_ACCESS_TOKEN")
     project_ref = _required("SUPABASE_PROJECT_REF")

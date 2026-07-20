@@ -22,7 +22,7 @@ def test_real_email_refresh_read_approved_send_and_sent_state(
     tmp_path: Path,
     provider: EmailProvider,
 ) -> None:
-    live = dotenv_values(".env.email.live")
+    live = dotenv_values(".env.live")
     if str(live.get("CONNECTOR_EMAIL_LIVE_SEND", "false")).lower() != "true":
         pytest.skip("Set CONNECTOR_EMAIL_LIVE_SEND=true for the explicit one-message live gate.")
     prefix = provider.value.upper()

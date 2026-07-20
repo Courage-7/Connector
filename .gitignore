@@ -22,4 +22,5 @@ web/node_modules/
 web/*.tsbuildinfo
 research/
 design/
+graphify-out/
 .PLANS.md

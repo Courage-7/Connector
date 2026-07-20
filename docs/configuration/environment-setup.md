@@ -16,10 +16,12 @@ all three provider callback URLs, `.env`, `.env.consumer`, and the provider dash
 | `.env` | Real API secrets and provider OAuth credentials | No |
 | `.env.consumer.example` | Safe template for the dashboard/MCP client | Yes |
 | `.env.consumer` | The one-time project API key used by the dashboard and MCP client | No |
-| `.env.live.example` | Optional Supabase live-test template | Yes |
-| `.env.live` | Temporary Supabase live-test credentials | No |
-| `.env.email.live.example` | Optional Gmail/Outlook live-test template | Yes |
-| `.env.email.live` | Temporary Gmail/Outlook refresh tokens | No |
+| `.env.live.example` | Optional Supabase, Gmail, and Outlook live-test template | Yes |
+| `.env.live` | Temporary real-provider acceptance credentials | No |
+
+For normal development, only `.env` and `.env.consumer` are active. `.env.live` is optional and is
+read only by explicitly selected real-provider tests. The `*.example` files are documentation and
+copyable templates; the application does not load them.
 
 The real files are excluded by `.gitignore`. Never paste a client secret, refresh token, project
 API key, Supabase account token, or Fernet key into an `*.example` file.
@@ -413,30 +415,37 @@ endpoint or a tenant-specific Microsoft authority.
 
 ## 10. Optional live-test credentials
 
-The deterministic test suite does not require real provider credentials. These files are needed
-only when intentionally running tests marked `live`.
+The deterministic test suite does not require real provider credentials. `.env.live` is needed
+only when intentionally running tests marked `live`. Keep all optional acceptance credentials in
+this one ignored file instead of mixing them into the API's `.env`.
 
 ### Supabase live test
 
-Copy `.env.live.example` to `.env.live`.
+Copy `.env.live.example` to `.env.live`. The template contains two Supabase test sections:
 
-- Create `SUPABASE_MANAGEMENT_ACCESS_TOKEN` under the Supabase Dashboard's account access-token
+- The Management API test uses `SUPABASE_MANAGEMENT_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF`,
+  `SUPABASE_LIVE_SCHEMA`, `SUPABASE_LIVE_TABLE`, and `SUPABASE_LIVE_COLUMNS`. Create the access token
+  under the Supabase Dashboard's account access-token
   settings. This is an account token for a disposable acceptance test, not a project service-role
   key.
-- Copy `SUPABASE_PROJECT_REF` from the project URL or project settings.
-- Point `SUPABASE_LIVE_SCHEMA`, `SUPABASE_LIVE_TABLE`, and `SUPABASE_LIVE_COLUMNS` at a disposable,
-  readable fixture table.
+- The full service-path test uses `SUPABASE_URL`, `SUPABASE_KEY`, `SUPABASE_LIVE_RESOURCE`, and
+  `SUPABASE_LIVE_COLUMNS`. Use a backend-only key for a disposable project and point the resource
+  and columns at a readable fixture table. `SUPABASE_LIVE_AUTHORIZATION_TOKEN` is optional when a
+  separate bearer token is required.
+
+Copy `SUPABASE_PROJECT_REF` from the project URL or project settings. Keep both tests pointed at
+disposable, non-production data.
 
 ### Outlook and Gmail live tests
 
-Copy `.env.email.live.example` to `.env.email.live`. These tests require refresh tokens belonging
-to disposable accounts plus controlled recipient addresses. They can send real mail only when
-`CONNECTOR_EMAIL_LIVE_SEND=true`.
+Use the Outlook/Gmail section of the same `.env.live` file. These tests require refresh tokens
+belonging to disposable accounts plus controlled recipient addresses. They can send real mail only
+when `CONNECTOR_EMAIL_LIVE_SEND=true`.
 
 Live refresh-token setup is intentionally separate from normal application setup. Obtain tokens
 through each provider's authorization-code flow using the same client ID, client secret, redirect
 URI, and scopes documented above. Never use a production mailbox for acceptance tests, and never
-commit either populated live-test file.
+commit the populated `.env.live` file.
 
 ## Troubleshooting
 
