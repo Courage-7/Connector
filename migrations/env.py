@@ -6,16 +6,21 @@ from os import getenv
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
-from connector_service.db import models as _models  # noqa: F401
-from connector_service.db.base import Base
+from connector_service.infrastructure.database import models as _models  # noqa: F401
+from connector_service.infrastructure.database.base import Base
 
 config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-database_url = getenv("CONNECTOR_DATABASE_URL")
-if database_url:
-    config.set_main_option("sqlalchemy.url", database_url)
+database_url = getenv("DATABASE_URL")
+if not database_url:
+    raise RuntimeError("DATABASE_URL is required to run migrations")
+if database_url.startswith("postgres://"):
+    database_url = "postgresql+psycopg://" + database_url.removeprefix("postgres://")
+elif database_url.startswith("postgresql://"):
+    database_url = database_url.replace("postgresql://", "postgresql+psycopg://", 1)
+config.set_main_option("sqlalchemy.url", database_url)
 
 target_metadata = Base.metadata
 

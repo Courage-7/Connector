@@ -3,10 +3,10 @@ __pycache__/
 *.egg-info/
 .coverage
 .env
-.env.live
-.env.smoke
-.env.consumer
+.env.*
+!.env.example
 .pytest-tmp/
+.pytest-work/
 .pytest-live-tmp/
 .pytest_cache/
 .ruff_cache/
@@ -18,9 +18,8 @@ dist/
 connector_service.db
 htmlcov/
 work/
-web/node_modules/
-web/*.tsbuildinfo
 research/
 design/
 graphify-out/
-.PLANS.md
+.codex/
+.agents/

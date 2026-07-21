@@ -28,12 +28,6 @@ class AuthenticationError(ServiceError):
     message = "Valid authentication is required."
 
 
-class AuthorizationError(ServiceError):
-    code = "action_not_allowed"
-    status_code = 403
-    message = "This project is not allowed to perform the requested action."
-
-
 class NotFoundError(ServiceError):
     code = "not_found"
     status_code = 404
@@ -50,11 +44,6 @@ class InvalidRequestError(ServiceError):
     code = "invalid_request"
     status_code = 422
     message = "The request is invalid."
-
-
-class InvalidCursorError(InvalidRequestError):
-    code = "invalid_cursor"
-    message = "The pagination cursor is invalid or does not match this query."
 
 
 class ProviderAccessError(ServiceError):

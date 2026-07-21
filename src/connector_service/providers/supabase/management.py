@@ -9,13 +9,14 @@ from urllib.parse import urlencode
 
 import httpx
 
-from connector_service.config import Settings
+from connector_service import __version__
 from connector_service.core.exceptions import (
     InvalidRequestError,
     ProviderAccessError,
     ProviderRequestError,
     ProviderUnavailableError,
 )
+from connector_service.providers.supabase.config import SupabaseProviderConfig
 
 
 @dataclass(frozen=True, slots=True)
@@ -95,11 +96,11 @@ class SupabaseManagementClient:
 
     def __init__(
         self,
-        settings: Settings,
+        config: SupabaseProviderConfig,
         *,
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
-        self._settings = settings
+        self._config = config
         self._transport = transport
 
     def authorization_url(
@@ -113,14 +114,14 @@ class SupabaseManagementClient:
         parameters = {
             "response_type": "code",
             "client_id": client_id,
-            "redirect_uri": self._settings.supabase_oauth_redirect_uri,
+            "redirect_uri": self._config.redirect_uri,
             "state": state,
             "code_challenge": code_challenge,
             "code_challenge_method": "S256",
         }
         if organization_slug:
             parameters["organization_slug"] = organization_slug
-        base_url = self._settings.supabase_management_api_url
+        base_url = self._config.management_api_url
         return f"{base_url}/v1/oauth/authorize?{urlencode(parameters)}"
 
     async def exchange_code(self, *, code: str, code_verifier: str) -> OAuthTokens:
@@ -128,7 +129,7 @@ class SupabaseManagementClient:
             {
                 "grant_type": "authorization_code",
                 "code": code,
-                "redirect_uri": self._settings.supabase_oauth_redirect_uri,
+                "redirect_uri": self._config.redirect_uri,
                 "code_verifier": code_verifier,
             }
         )
@@ -187,13 +188,13 @@ class SupabaseManagementClient:
         )
 
     def _oauth_credentials(self) -> tuple[str, str]:
-        client_id = self._settings.supabase_oauth_client_id
-        client_secret = self._settings.supabase_oauth_client_secret
-        if not client_id or client_secret is None:
+        client_id = self._config.client_id
+        client_secret = self._config.client_secret
+        if not client_id or not client_secret:
             raise InvalidRequestError(
                 "Supabase OAuth is not configured for this connector service."
             )
-        return client_id, client_secret.get_secret_value()
+        return client_id, client_secret
 
     async def _request_json(
         self,
@@ -205,13 +206,13 @@ class SupabaseManagementClient:
         json_body: dict[str, Any] | None = None,
         basic_auth: httpx.BasicAuth | None = None,
     ) -> Any:
-        headers = {"Accept": "application/json", "User-Agent": "connector-service/0.2.0"}
+        headers = {"Accept": "application/json", "User-Agent": f"connector-service/{__version__}"}
         if access_token:
             headers["Authorization"] = f"Bearer {access_token}"
         try:
             async with httpx.AsyncClient(
-                base_url=self._settings.supabase_management_api_url,
-                timeout=httpx.Timeout(self._settings.provider_timeout_seconds),
+                base_url=self._config.management_api_url,
+                timeout=httpx.Timeout(self._config.timeout_seconds),
                 transport=self._transport,
                 headers=headers,
             ) as client:
@@ -230,7 +231,7 @@ class SupabaseManagementClient:
             raise ProviderUnavailableError()
         if response.status_code >= 400:
             raise ProviderRequestError()
-        if len(response.content) > self._settings.max_provider_response_bytes:
+        if len(response.content) > self._config.max_response_bytes:
             raise ProviderRequestError("The provider response exceeded the configured size limit.")
         if response.status_code == 204 or not response.content:
             return {}

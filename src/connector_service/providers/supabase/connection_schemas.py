@@ -2,46 +2,17 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 from enum import StrEnum
 from typing import Any
 
 from pydantic import Field, field_validator
 
 from connector_service.core.contracts import StrictModel
-from connector_service.providers.supabase.schemas import SortDirection
 
 
-class SupabaseOAuthStart(StrictModel):
-    organization_slug: str | None = Field(
-        default=None,
-        min_length=1,
-        max_length=63,
-        pattern=r"^[a-z0-9][a-z0-9-]*$",
-    )
-    return_to: str | None = Field(
-        default=None,
-        pattern=r"^/app/?$",
-    )
-
-
-class SupabaseOAuthStartResponse(StrictModel):
-    authorization_url: str
-    expires_at: datetime
-
-
-class ProviderConnectionResponse(StrictModel):
-    id: str
-    connector: str
-    status: str
-    external_ref: str | None
-    name: str | None
-    created_at: datetime
-
-
-class SupabaseOAuthCallbackResponse(StrictModel):
-    connection: ProviderConnectionResponse
-    next_step: str = "Select a Supabase project from this connection's projects endpoint."
+class SortDirection(StrEnum):
+    ASC = "asc"
+    DESC = "desc"
 
 
 class SupabaseProjectSummary(StrictModel):
@@ -50,10 +21,6 @@ class SupabaseProjectSummary(StrictModel):
     organization_slug: str | None = Field(default=None, max_length=63)
     region: str | None = None
     status: str | None = None
-
-
-class SupabaseProjectSelection(StrictModel):
-    project_ref: str = Field(pattern=r"^[a-z0-9]{20}$")
 
 
 class TableKind(StrEnum):
