@@ -94,7 +94,7 @@ def create_app(
         title=runtime.app_name,
         version=__version__,
         description=(
-            "B2C provider connections and typed tools over REST and authenticated MCP. "
+            "Provider connections and typed tools over REST and authenticated MCP. "
             "Use the BearerAuth scheme for connections and tool execution."
         ),
         docs_url="/docs",

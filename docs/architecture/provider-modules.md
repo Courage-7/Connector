@@ -79,7 +79,7 @@ connections for capabilities backed by the same provider token.
 ## MCP choice
 
 Provider-hosted/community MCP servers can be useful for internal automation, but they are not a
-replacement for this B2C service. This service must own customer authentication, provider consent,
+replacement for this connector service. This service must own customer authentication, provider consent,
 encrypted token persistence, tenant boundaries, stable contracts, and provider-independent behavior.
 
 Our MCP endpoint is therefore a thin transport over our own typed application services. If a provider

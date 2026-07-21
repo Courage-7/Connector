@@ -1,6 +1,6 @@
 # Connector Service
 
-Connector Service is a focused FastAPI microservice that lets a B2C application or AI agent:
+Connector Service is a focused FastAPI microservice that lets a client application or AI agent:
 
 - discover supported providers and their typed tools;
 - send a user through delegated OAuth;
@@ -109,7 +109,7 @@ Authorization: Bearer <SERVICE_BEARER_TOKEN>
 
 `GET /v1/mcp` lists the currently exposed MCP tools. This is our stable service facade; provider-run
 MCP servers are not used because they do not replace our cross-provider OAuth ownership,
-persistence, common contracts, or B2C tenant boundary.
+persistence, common contracts, or per-user tenant boundary.
 
 ## Production authentication
 
@@ -129,7 +129,7 @@ Run migrations during deployment:
 python -m alembic upgrade head
 ```
 
-The consuming B2C app signs users in with Supabase Auth and forwards each user's access token in the
+The consuming application signs users in with Supabase Auth and forwards each user's access token in the
 standard `Authorization` header. Static authentication is rejected in production.
 
 ## Verification

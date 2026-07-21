@@ -167,7 +167,7 @@ backend, return the URL to its frontend, then assign that URL to `window.locatio
 
 ## 7. Configure production Supabase Auth
 
-In production, the B2C application should sign in its users and pass the user's access token to this
+In production, the client application should sign in its users and pass the user's access token to this
 service. Connector Service validates the token and uses its `sub` claim as the owner boundary.
 
 1. Open the Supabase project that provides customer authentication.
